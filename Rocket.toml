@@ -1,0 +1,11 @@
+[release]
+port = 5050
+workers = 3
+secret_key = "3eeb40bff050b8c8893dbba01b06349275cc34c31c50d607f6a416faf5198115"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"
