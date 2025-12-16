@@ -14,6 +14,8 @@ use rocket::fairing::{Fairing, Info, Kind};
 use dotenvy::dotenv;
 use rocket::http::Header;
 use rocket::fs::FileServer;
+use std::path::Path;
+use std::fs;
 use rocket_okapi::swagger_ui::{make_swagger_ui, SwaggerUIConfig};
 
 /* ----------------------------- CORS ----------------------------- */
@@ -49,6 +51,21 @@ impl Fairing for CORS {
         ));
 
         response.set_header(Header::new("Access-Control-Allow-Credentials", "true"));
+    }
+}
+
+
+fn ensure_upload_dirs() {
+    let dirs = [
+        "uploads",
+    ];
+
+    for dir in dirs {
+        if !Path::new(dir).exists() {
+            if let Err(e) = fs::create_dir_all(dir) {
+                eprintln!("⚠️ Failed to create directory {}: {}", dir, e);
+            }
+        }
     }
 }
 
@@ -102,6 +119,8 @@ fn rocket() -> Rocket<Build> {
     std::env::var("MSG91_TEMPLATE_ID")
 );
 
+
+    ensure_upload_dirs(); //ensures that upload dir is ther
     println!("🚀 Mento API running");
     println!("📚 Swagger UI → http://localhost:8000/api/docs");
 
@@ -117,7 +136,7 @@ fn rocket() -> Rocket<Build> {
 
                 // health check
                 health,
-                
+
                 // Auth
                 routes::auth::send_otp,
                 routes::auth::resend_otp,
