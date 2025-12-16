@@ -32,8 +32,8 @@ COPY --from=builder /app/target/release/your_app_name /app/app
 # Rocket production vars
 ENV ROCKET_PROFILE=release
 ENV ROCKET_ADDRESS=0.0.0.0
-ENV ROCKET_PORT=8000
+ENV ROCKET_PORT=5050
 
-EXPOSE 8000
+EXPOSE 5050
 
 CMD ["./app"]

@@ -5,7 +5,7 @@ services:
     image: rocket-prod
     container_name: rocket-server
     ports:
-      - "8000:8000"
+      - "5050:5050"
     restart: unless-stopped
     environment:
       ROCKET_PROFILE: release

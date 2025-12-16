@@ -35,14 +35,3 @@ data-encoding = "2.9.0"
 [dependencies.rocket_dyn_templates]
 version = "0.1.0"
 features = ["tera"]
-
-[production]
-workers = 3
-secret_key = "3eeb40bff050b8c8893dbba01b06349275cc34c31c50d607f6a416faf5198115"
-
-[profile.release]
-opt-level = "z"
-lto = true
-codegen-units = 1
-strip = true
-panic = "abort"
