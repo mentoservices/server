@@ -1,0 +1,11 @@
+version: "3.9"
+
+services:
+  rocket:
+    image: rocket-prod
+    container_name: rocket-server
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    environment:
+      ROCKET_PROFILE: release

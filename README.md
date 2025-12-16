@@ -1,112 +1,269 @@
-# Rocket
+# Mento Services - Rust Rocket Backend
 
-[![Build Status](https://github.com/rwf2/Rocket/workflows/CI/badge.svg)](https://github.com/rwf2/Rocket/actions)
-[![Rocket Homepage](https://img.shields.io/badge/web-rocket.rs-red.svg?style=flat&label=https&colorB=d33847)](https://rocket.rs)
-[![Current Crates.io Version](https://img.shields.io/crates/v/rocket.svg)](https://crates.io/crates/rocket)
-[![Matrix: #rocket:mozilla.org](https://img.shields.io/badge/style-%23rocket:mozilla.org-blue.svg?style=flat&label=[m])](https://chat.mozilla.org/#/room/#rocket:mozilla.org)
+A complete backend API for Mento Services platform built with Rust and Rocket framework.
 
-Rocket is an async web framework for Rust with a focus on usability, security,
-extensibility, and speed.
+## Features
 
-```rust
-#[macro_use] extern crate rocket;
+✅ **OTP-based Authentication** (Email-based, SMS-ready)
+✅ **JWT Token Authentication** (Access & Refresh tokens)
+✅ **User Profile Management**
+✅ **KYC Verification System**
+✅ **Worker Profiles** with subscriptions (Silver/Gold plans)
+✅ **Job Board** with posting and applications
+✅ **Category & Subcategory Management**
+✅ **Review & Rating System**
+✅ **File Upload** (Local storage for images & documents)
+✅ **Swagger/OpenAPI Documentation**
+✅ **Pagination** on all GET routes
+✅ **MongoDB** database
 
-#[get("/<name>/<age>")]
-fn hello(name: &str, age: u8) -> String {
-    format!("Hello, {} year old named {}!", age, name)
-}
+## Tech Stack
 
-#[launch]
-fn rocket() -> _ {
-    rocket::build().mount("/hello", routes![hello])
-}
+- **Rust** (Edition 2021)
+- **Rocket** 0.5.0 (Web framework)
+- **MongoDB** (Database)
+- **JWT** (Authentication)
+- **Lettre** (Email service)
+- **Swagger/OpenAPI** (API documentation)
+
+## Project Structure
+
+```
+src/
+├── main.rs              # Application entry point
+├── config/
+│   └── mod.rs          # Configuration management
+├── db/
+│   └── mod.rs          # Database connection
+├── models/
+│   ├── mod.rs
+│   ├── user.rs         # User model
+│   ├── otp.rs          # OTP model
+│   ├── kyc.rs          # KYC model
+│   ├── worker.rs       # Worker profile model
+│   ├── job.rs          # Job model
+│   ├── category.rs     # Category models
+│   ├── subscription.rs # Subscription model
+│   └── review.rs       # Review model
+├── routes/
+│   ├── mod.rs
+│   ├── auth.rs         # Authentication routes
+│   ├── user.rs         # User management routes
+│   ├── kyc.rs          # KYC routes
+│   ├── worker.rs       # Worker routes
+│   ├── job.rs          # Job routes
+│   ├── category.rs     # Category routes
+│   ├── file_upload.rs  # File upload routes
+│   └── review.rs       # Review routes
+├── services/
+│   ├── mod.rs
+│   ├── email.rs        # Email service
+│   └── jwt.rs          # JWT token service
+├── guards/
+│   ├── mod.rs
+│   ├── auth.rs         # JWT authentication guard
+│   └── kyc.rs          # KYC verification guard
+└── utils/
+    ├── mod.rs
+    ├── validation.rs   # Input validation
+    └── response.rs     # API response helpers
 ```
 
-Visiting `localhost:8000/hello/John/58`, for example, will trigger the `hello`
-route resulting in the string `Hello, 58 year old named John!` being sent to the
-browser. If an `<age>` string was passed in that can't be parsed as a `u8`, the
-route won't get called, resulting in a 404 error.
+## Installation
 
-## Documentation
+### Prerequisites
 
-Rocket is extensively documented:
+- Rust 1.70+ (Install from https://rustup.rs/)
+- MongoDB 4.4+
+- SMTP server (Gmail/SendGrid/etc.) for emails
 
-  * [Overview]: A brief look at what makes Rocket special.
-  * [Quickstart]: How to get started as quickly as possible.
-  * [Getting Started]: How to start your first Rocket project.
-  * [Guide]: A detailed guide and reference to Rocket.
-  * [API Documentation]: The "rustdocs".
+### Steps
 
-[Quickstart]: https://rocket.rs/guide/quickstart
-[Getting Started]: https://rocket.rs/guide/getting-started
-[Overview]: https://rocket.rs/overview/
-[Guide]: https://rocket.rs/guide/
-[API Documentation]: https://api.rocket.rs
+1. **Clone the repository**
+```bash
+git clone <repo-url>
+cd mento-services
+```
 
-Documentation for the `master` branch is available at https://rocket.rs/master
-and https://api.rocket.rs/master.
+2. **Configure environment variables**
+```bash
+cp .env.example .env
+# Edit .env with your configurations
+```
 
-Documentation for major release version `${x}` is available at
-`https://[api.]rocket.rs/v${x}`. For example, the v0.4 docs are available at
-https://rocket.rs/v0.4 and https://api.rocket.rs/v0.4.
+3. **Install dependencies**
+```bash
+cargo build
+```
 
-Finally, API docs for active git branches are available at
-`https://api.rocket.rs/${branch}`. For example, API docs for the `master` branch
-are available at https://api.rocket.rs/master. Branch rustdocs are built and
-deployed on every commit.
+4. **Create required directories**
+```bash
+mkdir -p uploads/images
+mkdir -p uploads/documents
+mkdir -p uploads/profiles
+```
 
-## Examples
-
-The [examples](examples#readme) directory contains complete crates that showcase
-Rocket's features and usage. Each example can be compiled and run with Cargo.
-For instance, the following sequence of commands builds and runs the `hello`
-example:
-
-```sh
-cd examples/hello
+5. **Run the application**
+```bash
 cargo run
 ```
 
-## Getting Help
+The server will start at `http://localhost:3000`
 
-If you find yourself needing help outside of the documentation, you may:
+## Environment Variables
 
-  * Ask questions via [GitHub discussions questions].
-  * Chat with us at [`#rocket:mozilla.org`] on Matrix (join [via Element]).
+```env
+MONGODB_URI=mongodb://localhost:27017/mento-services
+JWT_SECRET=your-super-secret-jwt-key
+JWT_REFRESH_SECRET=your-super-secret-refresh-key
+JWT_EXPIRY=900
+JWT_REFRESH_EXPIRY=604800
 
-[`#rocket:mozilla.org`]: https://chat.mozilla.org/#/room/#rocket:mozilla.org
-[via Element]: https://chat.mozilla.org/#/room/#rocket:mozilla.org
-[GitHub discussions questions]: https://github.com/rwf2/Rocket/discussions/categories/questions
+# Email Configuration
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USER=your-email@gmail.com
+MAIL_PASSWORD=your-app-password
+MAIL_FROM=Mento Services <noreply@mentoservices.com>
 
-## Contributing
+# Payment Gateway (future use)
+RAZORPAY_KEY_ID=your-razorpay-key-id
+RAZORPAY_KEY_SECRET=your-razorpay-key-secret
 
-Contributions are absolutely, positively welcomed and encouraged! If you're
-interested in contributing code, please first read [CONTRIBUTING] for complete
-guidelines. Additionally, you could:
+ROCKET_ADDRESS=0.0.0.0
+ROCKET_PORT=3000
+```
 
-  1. Submit a feature request or bug report as an [issue].
-  2. Ask for improved documentation as an [issue].
-  3. Comment on [issues that require feedback].
-  4. Answers questions in [GitHub discussions questions].
-  5. Share a project in [GitHub discussions show & tell].
+## API Documentation
 
-[issue]: https://github.com/rwf2/Rocket/issues
-[issues that require feedback]: https://github.com/rwf2/Rocket/issues?q=is%3Aissue+is%3Aopen+label%3A%22feedback+wanted%22
-[pull requests]: https://github.com/rwf2/Rocket/pulls
-[CONTRIBUTING]: CONTRIBUTING.md
-[GitHub discussions show & tell]: https://github.com/rwf2/Rocket/discussions/categories/show-tell
+Once the server is running, access the interactive Swagger documentation at:
+
+**http://localhost:3000/api/docs**
+
+## API Endpoints
+
+### Authentication
+- `POST /api/v1/auth/send-otp` - Send OTP to email
+- `POST /api/v1/auth/resend-otp` - Resend OTP
+- `POST /api/v1/auth/verify-otp` - Verify OTP and login
+- `POST /api/v1/auth/refresh` - Refresh access token
+
+### User Management
+- `GET /api/v1/user/profile` - Get user profile
+- `PUT /api/v1/user/profile` - Update profile
+- `POST /api/v1/user/upload-photo` - Upload profile photo
+- `PUT /api/v1/user/fcm-token` - Update FCM token
+- `DELETE /api/v1/user/account` - Delete account
+
+### KYC
+- `POST /api/v1/kyc/submit` - Submit KYC documents
+- `GET /api/v1/kyc/status` - Get KYC status
+- `GET /api/v1/kyc/admin/submissions` - Get all KYC submissions (paginated)
+- `GET /api/v1/kyc/admin/:id` - Get KYC by ID
+- `PUT /api/v1/kyc/admin/:id/status` - Update KYC status
+
+### Worker
+- `POST /api/v1/worker/profile` - Create worker profile
+- `GET /api/v1/worker/profile` - Get worker profile
+- `PUT /api/v1/worker/profile` - Update worker profile
+- `DELETE /api/v1/worker/profile` - Delete worker profile
+- `GET /api/v1/worker/search` - Search workers (paginated)
+- `GET /api/v1/worker/:id` - Get worker by ID
+- `POST /api/v1/worker/subscription` - Update subscription
+- `GET /api/v1/worker/admin/stats` - Get worker statistics (paginated)
+
+### Jobs
+- `POST /api/v1/job/create` - Create job posting
+- `GET /api/v1/job/search` - Search jobs (paginated)
+- `GET /api/v1/job/:id` - Get job details
+- `GET /api/v1/job/my/posted` - Get my posted jobs (paginated)
+- `POST /api/v1/job/:id/apply` - Apply to job
+- `PUT /api/v1/job/:id/status` - Update job status
+- `DELETE /api/v1/job/:id` - Delete job
+
+### Categories
+- `GET /api/v1/category/all` - Get all categories with subcategories
+- `GET /api/v1/category/:id/subcategories` - Get subcategories
+
+### File Upload
+- `POST /api/v1/upload/image` - Upload image
+- `POST /api/v1/upload/document` - Upload document
+
+### Reviews
+- `POST /api/v1/review/create` - Create review
+- `GET /api/v1/review/worker/:id` - Get worker reviews (paginated)
+- `DELETE /api/v1/review/:id` - Delete review
+
+## Pagination
+
+All GET endpoints that return lists support pagination with query parameters:
+- `page` - Page number (default: 1)
+- `limit` - Items per page (default: 20, max: 100)
+
+Example:
+```
+GET /api/v1/job/search?page=2&limit=10
+```
+
+Response includes pagination metadata:
+```json
+{
+  "success": true,
+  "data": {
+    "items": [...],
+    "pagination": {
+      "page": 2,
+      "limit": 10,
+      "total": 45,
+      "pages": 5
+    }
+  }
+}
+```
+
+## File Storage
+
+Files are stored locally in the `uploads/` directory:
+- `uploads/images/` - User profile photos and general images
+- `uploads/documents/` - KYC documents and PDFs
+- `uploads/profiles/` - Profile photos
+
+Access uploaded files via: `http://localhost:3000/uploads/...`
+
+## Development
+
+### Running in development mode
+```bash
+ROCKET_ENV=development cargo run
+```
+
+### Building for production
+```bash
+cargo build --release
+```
+
+### Running tests
+```bash
+cargo test
+```
+
+## Switching from Email to SMS (MSG91)
+
+The codebase is ready for SMS integration. To switch:
+
+1. Uncomment MSG91 service in `src/common/services/email.rs`
+2. Update `.env` with MSG91 credentials
+3. Update `src/routes/auth.rs` to use `Msg91Service` instead of `EmailService`
+
+## Security Notes
+
+- Always use HTTPS in production
+- Store JWT secrets securely (use environment variables)
+- Implement rate limiting for OTP endpoints
+- Add admin authentication guards for admin endpoints
+- Validate and sanitize all user inputs
+- Implement proper CORS policies
 
 ## License
 
-Rocket is licensed under either of the following, at your option:
-
- * Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or https://www.apache.org/licenses/LICENSE-2.0)
- * MIT License ([LICENSE-MIT](LICENSE-MIT) or https://opensource.org/licenses/MIT)
-
-Unless you explicitly state otherwise, any contribution intentionally submitted
-for inclusion in Rocket by you shall be dual licensed under the MIT License and
-Apache License, Version 2.0, without any additional terms or conditions.
-
-The Rocket website docs are licensed under [separate terms](docs/LICENSE). Any
-contribution intentionally submitted for inclusion in the Rocket website docs by
-you shall be licensed under those terms.
+PRIVATELY OWNED

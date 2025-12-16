@@ -1,29 +1,48 @@
-[workspace]
-resolver = "2"
-members = [
-  "core/lib/",
-  "core/codegen/",
-  "core/http/",
-  "contrib/db_pools/codegen/",
-  "contrib/db_pools/lib/",
-  "contrib/sync_db_pools/codegen/",
-  "contrib/sync_db_pools/lib/",
-  "contrib/dyn_templates/",
-  "contrib/ws/",
-  "docs/tests",
-]
+[package]
+name = "mento-server"
+version = "0.1.0"
+edition = "2024"
 
-[workspace.lints.rust]
-unexpected_cfgs = { level = "warn", check-cfg = ['cfg(nightly)'] }
-rust_2018_idioms = "warn"
-async_fn_in_trait = "allow"
-refining_impl_trait = "allow"
-# unreachable_pub = "warn"
-# single_use_lifetimes = "warn"
-# missing_docs = "warn"
+[dependencies]
+rocket = { version = "0.5.0", features = ["json"] }
+rocket_db_pools = { version = "0.1.0", features = ["mongodb"] }
+mongodb = "2.7"
+tokio = { version = "1.35", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+jsonwebtoken = "9.2"
+bcrypt = "0.15"
+validator = { version = "0.16", features = ["derive"] }
+lettre = "0.11"
+rand = "0.8"
+dotenvy = "0.15"
+regex = "1.10"
+uuid = { version = "1.6", features = ["v4", "serde"] }
+log = "0.4"
+env_logger = "0.11"
+reqwest = { version = "0.11", features = ["json"] }
 
-[workspace.lints.clippy]
-type_complexity = "allow"
-module_inception = "allow"
-multiple_bound_locations = "allow"
-manual_range_contains = "allow"
+# Swagger/OpenAPI
+rocket_okapi = { version = "0.8.0-rc.3", features = ["swagger", "rapidoc"] }
+schemars = { version = "0.8", features = ["chrono", "uuid"] }
+indexmap = "2.12.1"
+hmac = "0.12.1"
+sha2 = "0.10.9"
+hex = "0.4.3"
+data-encoding = "2.9.0"
+
+[dependencies.rocket_dyn_templates]
+version = "0.1.0"
+features = ["tera"]
+
+[production]
+workers = 3
+secret_key = "3eeb40bff050b8c8893dbba01b06349275cc34c31c50d607f6a416faf5198115"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"
