@@ -56,4 +56,34 @@ impl Config {
     pub fn is_development() -> bool {
         env::var("ROCKET_ENV").unwrap_or_default() == "development"
     }
+
+    pub fn razorpay_key_id() -> Option<String> {
+        env::var("RAZORPAY_KEY_ID").ok()
+    }
+
+    pub fn razorpay_key_secret() -> Option<String> {
+        env::var("RAZORPAY_KEY_SECRET").ok()
+    }
+
+    pub fn is_razorpay_enabled() -> bool {
+        Self::razorpay_key_id().is_some()
+            && Self::razorpay_key_secret().is_some()
+    }
+
+    pub fn msg91_auth_key() -> Option<String> {
+        env::var("MSG91_AUTH_KEY").ok()
+    }
+
+    pub fn msg91_sender_id() -> Option<String> {
+        env::var("MSG91_SENDER_ID").ok()
+    }
+
+    pub fn msg91_template_id() -> Option<String> {
+        env::var("MSG91_TEMPLATE_ID").ok()
+    }
+
+    pub fn is_msg91_enabled() -> bool {
+        Self::msg91_auth_key().is_some()
+            && Self::msg91_template_id().is_some()
+    }
 }

@@ -116,7 +116,7 @@ fn rocket() -> Rocket<Build> {
     env_logger::init();
     println!(
     "MSG91_TEMPLATE_ID = {:?}",
-    std::env::var("MSG91_TEMPLATE_ID")
+    std::env::var("MSG91_AUTH_KEY")
 );
 
 
