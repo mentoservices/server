@@ -119,7 +119,7 @@ pub async fn send_otp(
 
     Msg91Service::send_otp(&dto.mobile)
         .await
-        .map_err(|_| ApiError::internal_error("Failed to send OTP"))?;
+        .map_err(|e| ApiError::internal_error(e))?;
 
     Ok(Json(ApiResponse::success(serde_json::json!({
         "message": "OTP sent successfully"

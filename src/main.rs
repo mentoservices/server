@@ -18,6 +18,8 @@ use std::path::Path;
 use std::fs;
 use rocket_okapi::swagger_ui::{make_swagger_ui, SwaggerUIConfig};
 
+use crate::config::Config;
+
 /* ----------------------------- CORS ----------------------------- */
 
 pub struct CORS;
@@ -118,6 +120,13 @@ fn rocket() -> Rocket<Build> {
     "MSG91_TEMPLATE_ID = {:?}",
     std::env::var("MSG91_AUTH_KEY")
 );
+
+    println!("=== Config Debug ===");
+    println!("JWT Secret: {}", Config::jwt_secret());
+    println!("MongoDB URI: {}", Config::mongodb_uri());
+    println!("Mail Host: {}", Config::mail_host());
+    println!("Is Development: {}", Config::is_development());
+    println!("==================");
 
 
     ensure_upload_dirs(); //ensures that upload dir is ther

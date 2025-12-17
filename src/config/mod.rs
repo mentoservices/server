@@ -1,68 +1,95 @@
+use rocket::figment::{Figment, providers::{Env, Format, Toml}};
+use rocket::Config as RocketConfig;
 use std::env;
 
 pub struct Config;
 
 impl Config {
+    fn figment() -> Figment {
+        // Get the current profile
+        let profile = env::var("ROCKET_PROFILE").unwrap_or_else(|_| "development".to_string());
+        
+        Figment::from(RocketConfig::default())
+            .merge(Toml::file("Rocket.toml").nested())
+            .select(&profile)
+            .merge(Env::prefixed("ROCKET_").split("_"))
+    }
+
     pub fn jwt_secret() -> String {
-        env::var("JWT_SECRET").unwrap_or_else(|_| "default-secret".to_string())
+        Self::figment()
+            .extract_inner("jwt_secret")
+            .unwrap_or_else(|_| "default-secret".to_string())
     }
 
     pub fn jwt_refresh_secret() -> String {
-        env::var("JWT_REFRESH_SECRET").unwrap_or_else(|_| "default-refresh-secret".to_string())
+        Self::figment()
+            .extract_inner("jwt_refresh_secret")
+            .unwrap_or_else(|_| "default-refresh-secret".to_string())
     }
 
     pub fn jwt_expiry() -> i64 {
-        env::var("JWT_EXPIRY")
-            .unwrap_or_else(|_| "900".to_string())
-            .parse()
+        Self::figment()
+            .extract_inner("jwt_expiry")
             .unwrap_or(900)
     }
 
     pub fn jwt_refresh_expiry() -> i64 {
-        env::var("JWT_REFRESH_EXPIRY")
-            .unwrap_or_else(|_| "604800".to_string())
-            .parse()
+        Self::figment()
+            .extract_inner("jwt_refresh_expiry")
             .unwrap_or(604800)
     }
 
     pub fn mongodb_uri() -> String {
-        env::var("MONGODB_URI")
+        Self::figment()
+            .extract_inner("mongodb_uri")
             .unwrap_or_else(|_| "mongodb://localhost:27017/mento-services".to_string())
     }
 
     pub fn mail_host() -> String {
-        env::var("MAIL_HOST").unwrap_or_else(|_| "smtp.gmail.com".to_string())
+        Self::figment()
+            .extract_inner("mail_host")
+            .unwrap_or_else(|_| "smtp.gmail.com".to_string())
     }
 
     pub fn mail_port() -> u16 {
-        env::var("MAIL_PORT")
-            .unwrap_or_else(|_| "587".to_string())
-            .parse()
+        Self::figment()
+            .extract_inner("mail_port")
             .unwrap_or(587)
     }
 
     pub fn mail_user() -> String {
-        env::var("MAIL_USER").unwrap_or_default()
+        Self::figment()
+            .extract_inner("mail_user")
+            .unwrap_or_default()
     }
 
     pub fn mail_password() -> String {
-        env::var("MAIL_PASSWORD").unwrap_or_default()
+        Self::figment()
+            .extract_inner("mail_password")
+            .unwrap_or_default()
     }
 
     pub fn mail_from() -> String {
-        env::var("MAIL_FROM").unwrap_or_else(|_| "Mento Services <noreply@mentoservices.com>".to_string())
+        Self::figment()
+            .extract_inner("mail_from")
+            .unwrap_or_else(|_| "Mento Services <noreply@mentoservices.com>".to_string())
     }
 
     pub fn is_development() -> bool {
-        env::var("ROCKET_ENV").unwrap_or_default() == "development"
+        let profile = env::var("ROCKET_PROFILE").unwrap_or_else(|_| "development".to_string());
+        profile == "development"
     }
 
     pub fn razorpay_key_id() -> Option<String> {
-        env::var("RAZORPAY_KEY_ID").ok()
+        Self::figment()
+            .extract_inner("razorpay_key_id")
+            .ok()
     }
 
     pub fn razorpay_key_secret() -> Option<String> {
-        env::var("RAZORPAY_KEY_SECRET").ok()
+        Self::figment()
+            .extract_inner("razorpay_key_secret")
+            .ok()
     }
 
     pub fn is_razorpay_enabled() -> bool {
@@ -71,15 +98,21 @@ impl Config {
     }
 
     pub fn msg91_auth_key() -> Option<String> {
-        env::var("MSG91_AUTH_KEY").ok()
+        Self::figment()
+            .extract_inner("msg91_auth_key")
+            .ok()
     }
 
     pub fn msg91_sender_id() -> Option<String> {
-        env::var("MSG91_SENDER_ID").ok()
+        Self::figment()
+            .extract_inner("msg91_sender_id")
+            .ok()
     }
 
     pub fn msg91_template_id() -> Option<String> {
-        env::var("MSG91_TEMPLATE_ID").ok()
+        Self::figment()
+            .extract_inner("msg91_template_id")
+            .ok()
     }
 
     pub fn is_msg91_enabled() -> bool {

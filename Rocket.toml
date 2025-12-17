@@ -2,10 +2,38 @@
 port = 8000
 workers = 3
 secret_key = "3eeb40bff050b8c8893dbba01b06349275cc34c31c50d607f6a416faf5198115"
+mongodb_uri = "mongodb+srv://aslambhai93164_db_user:n5DlCVfjlXtzBv5i@mento0.6i4vpk2.mongodb.net/"
+jwt_secret = "PRODUCTION_JWT_SECRET"
+jwt_refresh_secret = "PRODUCTION_REFRESH_SECRET"
+jwt_expiry = 900
+jwt_refresh_expiry = 604800
+mail_host = "smtp.gmail.com"
+mail_port = 587
+mail_user = "production-email@gmail.com"
+mail_password = "production-app-password"
+mail_from = "Mento Services <noreply@mentoservices.com>"
+msg91_auth_key = "474235A4d3Epr95jaJ68f4cb5cP1"
+msg91_sender_id = "GIVGMJ6VVOFQ"
+msg91_template_id = "693fcaa1251ce63f4960a16a"
+razorpay_key_id = "rzp_live_RrozxPwaxxlYaP"
+razorpay_key_secret = "QZT3cDzz23Xw0mgPifyp1UtZ"
 
-[profile.release]
-opt-level = "z"
-lto = true
-codegen-units = 1
-strip = true
-panic = "abort"
+[default.databases]
+mongodb_uri = "mongodb+srv://aslambhai93164_db_user:n5DlCVfjlXtzBv5i@mento0.6i4vpk2.mongodb.net/"
+
+[development]
+mongodb_uri = "mongodb+srv://aslambhai93164_db_user:n5DlCVfjlXtzBv5i@mento0.6i4vpk2.mongodb.net/"
+jwt_secret = "dev-jwt-secret"
+jwt_refresh_secret = "dev-refresh-secret"
+jwt_expiry = 900
+jwt_refresh_expiry = 604800
+mail_host = "smtp.gmail.com"
+mail_port = 587
+mail_user = "your-email@gmail.com"
+mail_password = "your-app-password"
+mail_from = "Mento Services <noreply@mentoservices.com>"
+msg91_auth_key = "474235A4d3Epr95jaJ68f4cb5cP1"
+msg91_sender_id = "GIVGMJ6VVOFQ"
+msg91_template_id = "693fcaa1251ce63f4960a16a"
+razorpay_key_id = "rzp_live_RrozxPwaxxlYaP"
+razorpay_key_secret = "QZT3cDzz23Xw0mgPifyp1UtZ"
