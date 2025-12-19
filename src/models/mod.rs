@@ -6,6 +6,7 @@ pub mod job;
 pub mod category;
 pub mod subscription;
 pub mod review;
+pub mod service;
 
 pub use user::*;
 pub use otp::*;
@@ -15,3 +16,4 @@ pub use job::*;
 pub use category::*;
 pub use subscription::*;
 pub use review::*;
+pub use service::*;

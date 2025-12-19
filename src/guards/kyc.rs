@@ -29,13 +29,27 @@ impl<'r> FromRequest<'r> for KycGuard {
                 
                 match user {
                     Ok(Some(user)) => {
-                        if matches!(user.kyc_status, crate::models::KycStatus::Approved) {
+                        // Allow both Approved AND Submitted KYC status
+                        // This lets users proceed while their KYC is under review
+                        if matches!(
+                            user.kyc_status, 
+                            crate::models::KycStatus::Approved | crate::models::KycStatus::Submitted
+                        ) {
                             Outcome::Success(KycGuard { auth })
                         } else {
+                            // Log the actual status for debugging
+                            println!("KYC Guard rejected - status: {:?}", user.kyc_status);
                             Outcome::Error((Status::Forbidden, ()))
                         }
                     }
-                    _ => Outcome::Error((Status::Forbidden, ())),
+                    Ok(None) => {
+                        println!("KYC Guard rejected - user not found");
+                        Outcome::Error((Status::Forbidden, ()))
+                    }
+                    Err(e) => {
+                        println!("KYC Guard rejected - DB error: {:?}", e);
+                        Outcome::Error((Status::Forbidden, ()))
+                    }
                 }
             }
             Outcome::Error(e) => Outcome::Error(e),

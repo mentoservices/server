@@ -471,53 +471,102 @@ pub async fn find_nearby_workers(
     let limit = query.limit.unwrap_or(20).min(50);
     let skip = (page - 1) * limit;
 
-    let mut filter = doc! {
+    // CRITICAL FIX: Build filter WITHOUT geo query first
+    let mut match_filter = doc! {
         "is_verified": true,
         "is_available": true,
-        "location": {
-            "$nearSphere": {
-                "$geometry": {
+    };
+
+    if let Some(category) = &query.category {
+        match_filter.insert("categories", category);
+    }
+
+    if let Some(subcategory) = &query.subcategory {
+        match_filter.insert("subcategories", subcategory);
+    }
+
+    // Use aggregation pipeline with $geoNear (works better than find with $nearSphere)
+    let pipeline = vec![
+        doc! {
+            "$geoNear": {
+                "near": {
                     "type": "Point",
                     "coordinates": [query.longitude, query.latitude]
                 },
-                "$maxDistance": 10_000
+                "distanceField": "distance",
+                "maxDistance": 10000,
+                "spherical": true,
+                "key": "location"
+            }
+        },
+        doc! {
+            "$match": match_filter.clone()
+        },
+        doc! {
+            "$skip": skip
+        },
+        doc! {
+            "$limit": limit
+        },
+        doc! {
+            "$sort": {
+                "distance": 1,
+                "subscription_plan": -1,
+                "rating": -1
             }
         }
-    };
-
-    if let Some(category) = query.category {
-        filter.insert("categories", category);
-    }
-
-    if let Some(subcategory) = query.subcategory {
-        filter.insert("subcategories", subcategory);
-    }
-
-    let find_options = FindOptions::builder()
-        .skip(skip as u64)
-        .limit(limit)
-        .build();
+    ];
 
     let mut cursor = db
         .collection::<WorkerProfile>("worker_profiles")
-        .find(filter.clone(), find_options)
+        .aggregate(pipeline.clone(), None)
         .await
-        .map_err(|e| ApiError::internal_error(e.to_string()))?;
+        .map_err(|e| ApiError::internal_error(format!("Aggregation error: {}", e)))?;
 
     let mut workers = Vec::new();
     while cursor.advance().await.map_err(|e| ApiError::internal_error(e.to_string()))? {
-        workers.push(
-            cursor
-                .deserialize_current()
-                .map_err(|e| ApiError::internal_error(e.to_string()))?,
-        );
+        let doc = cursor.deserialize_current()
+            .map_err(|e| ApiError::internal_error(e.to_string()))?;
+        workers.push(doc);
     }
 
-    let total = db
-        .collection::<WorkerProfile>("worker_profiles")
-        .count_documents(filter, None)
+    // Count total (without skip/limit)
+    let count_pipeline = vec![
+        doc! {
+            "$geoNear": {
+                "near": {
+                    "type": "Point",
+                    "coordinates": [query.longitude, query.latitude]
+                },
+                "distanceField": "distance",
+                "maxDistance": 10000,
+                "spherical": true,
+                "key": "location"
+            }
+        },
+        doc! {
+            "$match": match_filter
+        },
+        doc! {
+            "$count": "total"
+        }
+    ];
+
+    let mut count_cursor = db
+        .collection::<mongodb::bson::Document>("worker_profiles")
+        .aggregate(count_pipeline, None)
         .await
         .map_err(|e| ApiError::internal_error(e.to_string()))?;
+
+    let total = if count_cursor.advance().await.unwrap_or(false) {
+        count_cursor
+            .deserialize_current()
+            .ok()
+            .and_then(|doc| doc.get_i64("total").ok())
+            .unwrap_or(0)
+    } else {
+        0
+    };
 
     Ok(Json(ApiResponse::success(serde_json::json!({
         "workers": workers,
@@ -529,8 +578,6 @@ pub async fn find_nearby_workers(
         }
     }))))
 }
-
-
 
 #[openapi(tag = "Worker")]
 #[post("/worker/location", data = "<dto>")]

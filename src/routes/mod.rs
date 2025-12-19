@@ -6,3 +6,4 @@ pub mod job;
 pub mod category;
 pub mod review;
 pub mod file_upload;
+pub mod service;
