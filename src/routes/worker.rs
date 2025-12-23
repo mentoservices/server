@@ -5,7 +5,7 @@ use rocket_okapi::openapi;
 use mongodb::bson::{doc, DateTime};
 use mongodb::options::FindOptions;
 use crate::db::DbConn;
-use crate::models::{CreateWorkerProfileDto, Subscription, SubscriptionPlan, UpdateWorkerProfileDto, WorkerProfile, SubscriptionType, SubscriptionStatus, NearbyWorkerQuery, GeoLocation, UpdateLocationDto};
+use crate::models::{CreateWorkerProfileDto, Subscription, WorkerSubscriptionPlan, UpdateWorkerProfileDto, WorkerProfile, SubscriptionType, SubscriptionStatus, NearbyWorkerQuery, GeoLocation, UpdateLocationDto};
 use crate::guards::{AuthGuard, KycGuard};
 use crate::utils::{ApiResponse, ApiError};
 use hmac::{Hmac, Mac};
@@ -32,8 +32,8 @@ pub async fn create_subscription(
 ) -> Result<Json<ApiResponse<serde_json::Value>>, ApiError> {
     // Validate plan and get price
     let (price, plan_type) = match plan_name.to_lowercase().as_str() {
-        "silver" => (1.0, SubscriptionPlan::Silver),
-        "gold" => (2.0, SubscriptionPlan::Gold),
+        "silver" => (1.0, WorkerSubscriptionPlan::Silver),
+        "gold" => (2.0, WorkerSubscriptionPlan::Gold),
         _ => return Err(ApiError::bad_request("Invalid plan. Choose 'silver' or 'gold'")),
     };
 
@@ -246,9 +246,9 @@ pub async fn create_worker_profile(
 
     let subscription = has_subscription.unwrap();
     let subscription_plan = match subscription.plan_name.as_str() {
-        "silver" => SubscriptionPlan::Silver,
-        "gold" => SubscriptionPlan::Gold,
-        _ => SubscriptionPlan::None,
+        "silver" => WorkerSubscriptionPlan::Silver,
+        "gold" => WorkerSubscriptionPlan::Gold,
+        _ => WorkerSubscriptionPlan::None,
     };
     
     let location = GeoLocation {

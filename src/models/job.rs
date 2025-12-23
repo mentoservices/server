@@ -1,136 +1,173 @@
-use mongodb::bson::{oid::ObjectId, DateTime as BsonDateTime};
+use mongodb::bson::{oid::ObjectId, DateTime};
 use serde::{Deserialize, Serialize};
 use rocket_okapi::okapi::schemars::JsonSchema;
-use chrono::{DateTime as ChronoDateTime, Utc, NaiveDateTime};
 
 #[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]
 #[serde(rename_all = "lowercase")]
-pub enum JobStatus {
-    Open,
-    InProgress,
-    Completed,
-    Cancelled,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]
-#[serde(rename_all = "lowercase")]
-pub enum JobType {
-    FullTime,
-    PartTime,
-    Contract,
-    Freelance,
+pub enum JobSeekerSubscriptionPlan {
+    None,
+    Basic,
+    Premium,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Job {
+pub struct JobSeekerProfile {
+    #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
     pub id: Option<ObjectId>,
-    pub posted_by: ObjectId,
-    pub title: String,
-    pub description: String,
-    pub category: Option<String>,
-    pub job_type: Option<String>,
-    pub salary_min: Option<f64>,
-    pub salary_max: Option<f64>,
-    pub location: Option<String>,
-    pub city: Option<String>,
-    pub pincode: Option<String>,
-    pub required_skills: Vec<String>,
-    pub experience_required: Option<String>,
-    pub status: String,
-    pub applications: Vec<ObjectId>,
-    pub views: i32,
-    pub is_active: bool,
-    pub expires_at: Option<BsonDateTime>,
-    pub created_at: BsonDateTime,
-    pub updated_at: BsonDateTime,
+    pub user_id: ObjectId,
+    
+    // Professional Information
+    pub full_name: String,
+    pub headline: Option<String>, // e.g., "Senior Software Engineer"
+    pub bio: Option<String>,
+    
+    // Skills & Experience
+    pub skills: Vec<String>,
+    pub experience_years: Option<i32>,
+    pub education: Vec<Education>,
+    pub work_experience: Vec<WorkExperience>,
+    
+    // Job Preferences
+    pub preferred_categories: Vec<String>,
+    pub preferred_job_types: Vec<String>, // "fulltime", "parttime", "contract", "freelance"
+    pub preferred_locations: Vec<String>,
+    pub expected_salary_min: Option<f64>,
+    pub expected_salary_max: Option<f64>,
+    pub willing_to_relocate: bool,
+    
+    // Documents
+    pub resume_url: Option<String>,
+    pub portfolio_url: Option<String>,
+    pub linkedin_url: Option<String>,
+    
+    // Subscription & Status
+    pub subscription_plan: JobSeekerSubscriptionPlan,
+    pub subscription_expires_at: Option<DateTime>,
+    pub is_verified: bool,
+    pub is_available: bool, // Currently looking for jobs
+    
+    // Metadata
+    pub profile_views: i32,
+    pub applications_count: i32,
+    pub created_at: DateTime,
+    pub updated_at: DateTime,
 }
 
-// API-facing DTO
-#[derive(Debug, Serialize, JsonSchema)]
-pub struct JobResponse {
-    pub id: Option<String>,
-    pub posted_by: String,
-    pub title: String,
-    pub description: String,
-    pub category: Option<String>,
-    pub job_type: Option<String>,
-    pub salary_min: Option<f64>,
-    pub salary_max: Option<f64>,
-    pub location: Option<String>,
-    pub city: Option<String>,
-    pub pincode: Option<String>,
-    pub required_skills: Vec<String>,
-    pub experience_required: Option<String>,
-    pub status: String,
-    pub applications: Vec<String>,
-    pub views: i32,
-    pub is_active: bool,
-    pub expires_at: Option<ChronoDateTime<Utc>>,
-    pub created_at: ChronoDateTime<Utc>,
-    pub updated_at: ChronoDateTime<Utc>,
+#[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]
+pub struct Education {
+    pub degree: String,
+    pub institution: String,
+    pub field_of_study: Option<String>,
+    pub start_year: Option<i32>,
+    pub end_year: Option<i32>,
+    pub is_current: bool,
 }
 
-impl From<Job> for JobResponse {
-    fn from(j: Job) -> Self {
-        // helper inline closure to convert BsonDateTime -> chrono::DateTime<Utc>
-        let bson_to_chrono = |dt: BsonDateTime| -> ChronoDateTime<Utc> {
-            let millis = dt.timestamp_millis();
-            let secs = millis / 1000;
-            // normalize remainder to positive u32 nanoseconds
-            let millis_rem = (millis % 1000).abs() as u32;
-            let nsecs = millis_rem * 1_000_000;
-            ChronoDateTime::<Utc>::from_utc(
-                NaiveDateTime::from_timestamp(secs, nsecs),
-                Utc,
-            )
-        };
-
-        let id = j.id.map(|o| o.to_hex());
-        let posted_by = j.posted_by.to_hex();
-        let applications = j
-            .applications
-            .into_iter()
-            .map(|o| o.to_hex())
-            .collect::<Vec<_>>();
-
-        let expires_at = j.expires_at.map(|b| bson_to_chrono(b));
-
-        JobResponse {
-            id,
-            posted_by,
-            title: j.title,
-            description: j.description,
-            category: j.category,
-            job_type: j.job_type,
-            salary_min: j.salary_min,
-            salary_max: j.salary_max,
-            location: j.location,
-            city: j.city,
-            pincode: j.pincode,
-            required_skills: j.required_skills,
-            experience_required: j.experience_required,
-            status: j.status,
-            applications,
-            views: j.views,
-            is_active: j.is_active,
-            expires_at,
-            created_at: bson_to_chrono(j.created_at),
-            updated_at: bson_to_chrono(j.updated_at),
-        }
-    }
+#[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]
+pub struct WorkExperience {
+    pub title: String,
+    pub company: String,
+    pub location: Option<String>,
+    pub start_date: Option<String>, // ISO date string
+    pub end_date: Option<String>,
+    pub is_current: bool,
+    pub description: Option<String>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
-pub struct CreateJobDto {
-    pub title: String,
-    pub description: String,
-    pub category: String,
-    pub job_type: JobType,
-    pub salary_min: Option<f64>,
-    pub salary_max: Option<f64>,
-    pub location: String,
-    pub city: String,
-    pub pincode: String,
-    pub required_skills: Vec<String>,
-    pub experience_required: Option<i32>,
+pub struct CreateJobSeekerProfileDto {
+    pub full_name: String,
+    pub headline: Option<String>,
+    pub bio: Option<String>,
+    pub skills: Vec<String>,
+    pub experience_years: Option<i32>,
+    pub education: Vec<Education>,
+    pub work_experience: Vec<WorkExperience>,
+    pub preferred_categories: Vec<String>,
+    pub preferred_job_types: Vec<String>,
+    pub preferred_locations: Vec<String>,
+    pub expected_salary_min: Option<f64>,
+    pub expected_salary_max: Option<f64>,
+    pub willing_to_relocate: bool,
+    pub resume_url: Option<String>,
+    pub portfolio_url: Option<String>,
+    pub linkedin_url: Option<String>,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct UpdateJobSeekerProfileDto {
+    pub full_name: Option<String>,
+    pub headline: Option<String>,
+    pub bio: Option<String>,
+    pub skills: Option<Vec<String>>,
+    pub experience_years: Option<i32>,
+    pub education: Option<Vec<Education>>,
+    pub work_experience: Option<Vec<WorkExperience>>,
+    pub preferred_categories: Option<Vec<String>>,
+    pub preferred_job_types: Option<Vec<String>>,
+    pub preferred_locations: Option<Vec<String>>,
+    pub expected_salary_min: Option<f64>,
+    pub expected_salary_max: Option<f64>,
+    pub willing_to_relocate: Option<bool>,
+    pub resume_url: Option<String>,
+    pub portfolio_url: Option<String>,
+    pub linkedin_url: Option<String>,
+    pub is_available: Option<bool>,
+}
+
+#[derive(Debug, Serialize, JsonSchema)]
+pub struct JobSeekerProfileResponse {
+    pub id: String,
+    pub user_id: String,
+    pub full_name: String,
+    pub headline: Option<String>,
+    pub bio: Option<String>,
+    pub skills: Vec<String>,
+    pub experience_years: Option<i32>,
+    pub education: Vec<Education>,
+    pub work_experience: Vec<WorkExperience>,
+    pub preferred_categories: Vec<String>,
+    pub preferred_job_types: Vec<String>,
+    pub preferred_locations: Vec<String>,
+    pub expected_salary_min: Option<f64>,
+    pub expected_salary_max: Option<f64>,
+    pub willing_to_relocate: bool,
+    pub resume_url: Option<String>,
+    pub portfolio_url: Option<String>,
+    pub linkedin_url: Option<String>,
+    pub subscription_plan: String,
+    pub is_verified: bool,
+    pub is_available: bool,
+    pub profile_views: i32,
+    pub applications_count: i32,
+}
+
+impl From<JobSeekerProfile> for JobSeekerProfileResponse {
+    fn from(profile: JobSeekerProfile) -> Self {
+        JobSeekerProfileResponse {
+            id: profile.id.unwrap().to_hex(),
+            user_id: profile.user_id.to_hex(),
+            full_name: profile.full_name,
+            headline: profile.headline,
+            bio: profile.bio,
+            skills: profile.skills,
+            experience_years: profile.experience_years,
+            education: profile.education,
+            work_experience: profile.work_experience,
+            preferred_categories: profile.preferred_categories,
+            preferred_job_types: profile.preferred_job_types,
+            preferred_locations: profile.preferred_locations,
+            expected_salary_min: profile.expected_salary_min,
+            expected_salary_max: profile.expected_salary_max,
+            willing_to_relocate: profile.willing_to_relocate,
+            resume_url: profile.resume_url,
+            portfolio_url: profile.portfolio_url,
+            linkedin_url: profile.linkedin_url,
+            subscription_plan: format!("{:?}", profile.subscription_plan).to_lowercase(),
+            is_verified: profile.is_verified,
+            is_available: profile.is_available,
+            profile_views: profile.profile_views,
+            applications_count: profile.applications_count,
+        }
+    }
 }

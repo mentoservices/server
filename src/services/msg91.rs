@@ -1,9 +1,17 @@
 use reqwest::Client;
+use serde::{Deserialize};
 use serde_json::json;
 
 const MSG91_BASE: &str = "https://control.msg91.com/api/v5/otp";
 
 pub struct Msg91Service;
+
+#[derive(Debug, Deserialize)]
+struct Msg91VerifyResponse {
+    #[serde(rename = "type")]
+    response_type: String, // "success" or "error"
+    message: String,
+}
 
 impl Msg91Service {
     fn client() -> Client {
@@ -36,7 +44,7 @@ impl Msg91Service {
             .map_err(|e| e.to_string())?;
 
         if !res.status().is_success() {
-            return Err(res.text().await.unwrap_or_default());
+            return Err(res.text().await.unwrap_or_else(|_| "MSG91 send OTP failed".to_string()));
         }
 
         Ok(())
@@ -53,13 +61,18 @@ impl Msg91Service {
         );
 
         let res = Self::client()
-            .post(url)
+            .post(&url)
             .send()
             .await
             .map_err(|e| e.to_string())?;
 
-        if !res.status().is_success() {
-            return Err(res.text().await.unwrap_or_default());
+        let body: Msg91VerifyResponse = res
+            .json()
+            .await
+            .map_err(|e| e.to_string())?;
+
+        if body.response_type != "success" {
+            return Err(body.message);
         }
 
         Ok(())

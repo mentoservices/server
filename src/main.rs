@@ -130,14 +130,6 @@ fn rocket() -> Rocket<Build> {
                 routes::worker::search_workers,
                 routes::worker::find_nearby_workers,
                 routes::worker::update_worker_location,
-                // Jobs
-                routes::job::create_job,
-                routes::job::get_jobs,
-                routes::job::get_job_by_id,
-                routes::job::get_my_posted_jobs,
-                routes::job::apply_to_job,
-                routes::job::update_job_status,
-                routes::job::delete_job,
                 // Categories
                 routes::category::get_all_categories,
                 routes::category::get_subcategories,
@@ -155,6 +147,17 @@ fn rocket() -> Rocket<Build> {
                 routes::review::create_review,
                 routes::review::get_worker_reviews,
                 routes::review::delete_review,
+                // Job Seeker Subscription
+                routes::job::create_job_seeker_subscription,
+                routes::job::verify_job_seeker_payment,
+                routes::job::get_job_seeker_subscription_status,
+                // Job Seeker Profile
+                routes::job::create_job_seeker_profile,
+                routes::job::get_job_seeker_profile,
+                routes::job::get_job_seeker_profile_by_id,
+                routes::job::update_job_seeker_profile,
+                routes::job::search_job_seekers,
+                routes::job::delete_job_seeker_profile,
             ],
         )
         .mount("/uploads", FileServer::from("uploads"))

@@ -16,7 +16,7 @@ pub struct NearbyWorkerQuery {
 
 #[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]
 #[serde(rename_all = "lowercase")]
-pub enum SubscriptionPlan {
+pub enum WorkerSubscriptionPlan {
     None,
     Silver,
     Gold,
@@ -47,7 +47,7 @@ pub struct WorkerProfile {
     pub hourly_rate: Option<f64>,
     pub license_number: Option<String>,
     pub service_areas: Vec<String>,
-    pub subscription_plan: SubscriptionPlan,
+    pub subscription_plan: WorkerSubscriptionPlan,
     pub subscription_expires_at: Option<DateTime>,
     pub is_verified: bool,
     pub is_available: bool,
