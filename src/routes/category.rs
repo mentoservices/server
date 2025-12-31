@@ -1,107 +1,134 @@
-use rocket::serde::json::Json;
-use rocket::State;
-use rocket_okapi::openapi;
-use mongodb::bson::doc;
-use mongodb::options::FindOptions;
 use crate::db::DbConn;
-use crate::models::{MainCategory, SubCategory, CategoryResponse, SubCategoryResponse};
-use crate::utils::{ApiResponse, ApiError};
+use crate::models::{CategoryResponse, SubCategoryResponse};
+use crate::utils::{ApiError, ApiResponse};
+use mongodb::bson::doc;
+use rocket::State;
+use rocket::serde::json::Json;
+use rocket_okapi::openapi;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+
+// Internal struct to deserialize from MongoDB
+#[derive(Debug, Serialize, Deserialize)]
+struct Service {
+    #[serde(rename = "_id")]
+    id: mongodb::bson::oid::ObjectId,
+    #[serde(rename = "serviceId")]
+    service_id: String,
+    name: String,
+    #[serde(rename = "serviceCategory")]
+    service_category: String,
+    price: String,
+    rating: String,
+    description: String,
+    icon: String,
+    color: String,
+}
 
 #[openapi(tag = "Category")]
 #[get("/category/all")]
 pub async fn get_all_categories(
     db: &State<DbConn>,
 ) -> Result<Json<ApiResponse<Vec<CategoryResponse>>>, ApiError> {
-    let find_options = FindOptions::builder()
-        .sort(doc! { "order": 1 })
-        .build();
-    
-    let mut cursor = db.collection::<MainCategory>("main_categories")
-        .find(doc! { "is_active": true }, find_options)
+    // Fetch all services from the services collection
+    let mut cursor = db
+        .collection::<Service>("services")
+        .find(None, None)
         .await
         .map_err(|e| ApiError::internal_error(format!("Database error: {}", e)))?;
-    
-    let mut categories = Vec::new();
-    
-    while cursor.advance().await.map_err(|e| ApiError::internal_error(format!("Cursor error: {}", e)))? {
-        let main_cat = cursor.deserialize_current()
+
+    let mut services = Vec::new();
+    while cursor
+        .advance()
+        .await
+        .map_err(|e| ApiError::internal_error(format!("Cursor error: {}", e)))?
+    {
+        let service = cursor
+            .deserialize_current()
             .map_err(|e| ApiError::internal_error(format!("Deserialization error: {}", e)))?;
-        
-        // Get subcategories
-        let sub_find_options = FindOptions::builder()
-            .sort(doc! { "order": 1 })
-            .build();
-        
-        let mut sub_cursor = db.collection::<SubCategory>("sub_categories")
-            .find(
-                doc! { 
-                    "main_category_id": main_cat.id.as_ref().unwrap(),
-                    "is_active": true 
-                },
-                sub_find_options
-            )
-            .await
-            .map_err(|e| ApiError::internal_error(format!("Database error: {}", e)))?;
-        
-        let mut subcategories = Vec::new();
-        while sub_cursor.advance().await.map_err(|e| ApiError::internal_error(format!("Cursor error: {}", e)))? {
-            let sub_cat = sub_cursor.deserialize_current()
-                .map_err(|e| ApiError::internal_error(format!("Deserialization error: {}", e)))?;
-            
-            subcategories.push(SubCategoryResponse {
-                id: sub_cat.id.unwrap().to_hex(),
-                name: sub_cat.name,
-                description: sub_cat.description,
-            });
-        }
-        
-        categories.push(CategoryResponse {
-            id: main_cat.id.unwrap().to_hex(),
-            name: main_cat.name,
-            description: main_cat.description,
-            icon: main_cat.icon,
-            subcategories,
-        });
+        services.push(service);
     }
+
+    // Group services by category
+    let mut categories_map: HashMap<String, Vec<Service>> = HashMap::new();
     
+    for service in services {
+        categories_map
+            .entry(service.service_category.clone())
+            .or_insert_with(Vec::new)
+            .push(service);
+    }
+
+    // Convert to response format
+    let mut categories: Vec<CategoryResponse> = categories_map
+        .into_iter()
+        .map(|(category_name, services)| {
+            // Use the first service's icon for the category (clone before moving `services`)
+            let first_icon = services.first().map(|s| s.icon.clone());
+            
+            let subcategories: Vec<SubCategoryResponse> = services
+                .into_iter()
+                .map(|service| SubCategoryResponse {
+                    id: service.id.to_hex(),
+                    name: service.name,
+                    description: Some(service.description),
+                })
+                .collect();
+
+            CategoryResponse {
+                id: category_name.clone(),
+                name: category_name,
+                description: None,
+                icon: first_icon,
+                subcategories,
+            }
+        })
+        .collect();
+
+    // Sort categories alphabetically
+    categories.sort_by(|a, b| a.name.cmp(&b.name));
+
     Ok(Json(ApiResponse::success(categories)))
 }
 
 #[openapi(tag = "Category")]
-#[get("/category/<category_id>/subcategories")]
+#[get("/category/<category_name>/subcategories")]
 pub async fn get_subcategories(
     db: &State<DbConn>,
-    category_id: String,
+    category_name: String,
 ) -> Result<Json<ApiResponse<Vec<SubCategoryResponse>>>, ApiError> {
-    let object_id = mongodb::bson::oid::ObjectId::parse_str(&category_id)
-        .map_err(|_| ApiError::bad_request("Invalid category ID"))?;
-    
-    let find_options = FindOptions::builder()
-        .sort(doc! { "order": 1 })
-        .build();
-    
-    let mut cursor = db.collection::<SubCategory>("sub_categories")
+    // Find all services in this category
+    let mut cursor = db
+        .collection::<Service>("services")
         .find(
-            doc! { 
-                "main_category_id": object_id,
-                "is_active": true 
+            doc! {
+                "serviceCategory": &category_name
             },
-            find_options
+            None,
         )
         .await
         .map_err(|e| ApiError::internal_error(format!("Database error: {}", e)))?;
-    
+
     let mut subcategories = Vec::new();
-    while cursor.advance().await.map_err(|e| ApiError::internal_error(format!("Cursor error: {}", e)))? {
-        let sub_cat = cursor.deserialize_current()
+    while cursor
+        .advance()
+        .await
+        .map_err(|e| ApiError::internal_error(format!("Cursor error: {}", e)))?
+    {
+        let service = cursor
+            .deserialize_current()
             .map_err(|e| ApiError::internal_error(format!("Deserialization error: {}", e)))?;
-        
+
         subcategories.push(SubCategoryResponse {
-            id: sub_cat.id.unwrap().to_hex(),
-            name: sub_cat.name,
-            description: sub_cat.description,
+            id: service.id.to_hex(),
+            name: service.name,
+            description: Some(service.description),
         });
     }
-    
+
+    if subcategories.is_empty() {
+        return Err(ApiError::not_found("Category not found"));
+    }
+
     Ok(Json(ApiResponse::success(subcategories)))
 }

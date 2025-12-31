@@ -158,6 +158,24 @@ fn rocket() -> Rocket<Build> {
                 routes::job::update_job_seeker_profile,
                 routes::job::search_job_seekers,
                 routes::job::delete_job_seeker_profile,
+                // Admin Routes - Workers
+                routes::admin::get_all_workers,
+                routes::admin::verify_worker,
+                // Admin Routes - Job Seekers
+                routes::admin::get_all_job_seekers,
+                routes::admin::verify_job_seeker,
+                // Admin Routes - Categories
+                routes::admin::create_category,
+                routes::admin::update_category,
+                routes::admin::delete_category,
+                // Admin Routes - Subcategories
+                routes::admin::create_subcategory,
+                routes::admin::update_subcategory,
+                routes::admin::delete_subcategory,
+                // Admin Routes - Jobs
+                routes::admin::get_all_jobs,
+                routes::admin::update_job_status,
+                routes::admin::delete_job,
             ],
         )
         .mount("/uploads", FileServer::from("uploads"))

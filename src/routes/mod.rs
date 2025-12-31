@@ -7,3 +7,4 @@ pub mod category;
 pub mod review;
 pub mod file_upload;
 pub mod service;
+pub mod admin;

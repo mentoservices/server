@@ -1,23 +1,31 @@
 use rocket::serde::json::Json;
 use rocket::State;
 use rocket_okapi::openapi;
-use mongodb::bson::{doc, DateTime};
+use mongodb::bson::{doc, DateTime, oid::ObjectId};
 use mongodb::options::FindOptions;
 use crate::db::DbConn;
 use crate::models::{Kyc, SubmitKycDto, User, KycStatusEnum, KycStatus as UserKycStatus};
-use crate::guards::AuthGuard;
 use crate::utils::{ApiResponse, ApiError};
+
+#[derive(serde::Deserialize, rocket_okapi::okapi::schemars::JsonSchema)]
+pub struct SubmitKycRequest {
+    pub user_id: String,
+    #[serde(flatten)]
+    pub kyc_data: SubmitKycDto,
+}
 
 #[openapi(tag = "KYC")]
 #[post("/kyc/submit", data = "<dto>")]
 pub async fn submit_kyc(
     db: &State<DbConn>,
-    auth: AuthGuard,
-    dto: Json<SubmitKycDto>,
+    dto: Json<SubmitKycRequest>,
 ) -> Result<Json<ApiResponse<serde_json::Value>>, ApiError> {
+    let user_id = ObjectId::parse_str(&dto.user_id)
+        .map_err(|_| ApiError::bad_request("Invalid user ID"))?;
+    
     // Check if KYC already exists
     let existing_kyc = db.collection::<Kyc>("kycs")
-        .find_one(doc! { "user_id": auth.user_id }, None)
+        .find_one(doc! { "user_id": user_id }, None)
         .await
         .map_err(|e| ApiError::internal_error(format!("Database error: {}", e)))?;
     
@@ -37,7 +45,7 @@ pub async fn submit_kyc(
     }
     
     // Parse date of birth
-    let dob = chrono::NaiveDate::parse_from_str(&dto.date_of_birth, "%Y-%m-%d")
+    let dob = chrono::NaiveDate::parse_from_str(&dto.kyc_data.date_of_birth, "%Y-%m-%d")
         .map_err(|_| ApiError::bad_request("Invalid date format. Use YYYY-MM-DD"))?;
     
     let dob_datetime = DateTime::from_millis(dob.and_hms_opt(0, 0, 0).unwrap().and_utc().timestamp_millis());
@@ -45,18 +53,18 @@ pub async fn submit_kyc(
     // Create new KYC
     let kyc = Kyc {
         id: None,
-        user_id: auth.user_id,
-        full_name: dto.full_name.clone(),
+        user_id,
+        full_name: dto.kyc_data.full_name.clone(),
         date_of_birth: dob_datetime,
-        address: dto.address.clone(),
-        city: dto.city.clone(),
-        state: dto.state.clone(),
-        pincode: dto.pincode.clone(),
-        document_type: dto.document_type.clone(),
-        document_number: dto.document_number.clone(),
-        document_front_image: dto.document_front_image.clone(),
-        document_back_image: dto.document_back_image.clone(),
-        selfie_image: dto.selfie_image.clone(),
+        address: dto.kyc_data.address.clone(),
+        city: dto.kyc_data.city.clone(),
+        state: dto.kyc_data.state.clone(),
+        pincode: dto.kyc_data.pincode.clone(),
+        document_type: dto.kyc_data.document_type.clone(),
+        document_number: dto.kyc_data.document_number.clone(),
+        document_front_image: dto.kyc_data.document_front_image.clone(),
+        document_back_image: dto.kyc_data.document_back_image.clone(),
+        selfie_image: dto.kyc_data.selfie_image.clone(),
         status: KycStatusEnum::Submitted,
         rejection_reason: None,
         verified_by: None,
@@ -73,7 +81,7 @@ pub async fn submit_kyc(
     // Update user KYC status
     db.collection::<User>("users")
         .update_one(
-            doc! { "_id": auth.user_id },
+            doc! { "_id": user_id },
             doc! { "$set": { "kyc_status": "submitted" } },
             None
         )
@@ -89,13 +97,16 @@ pub async fn submit_kyc(
 }
 
 #[openapi(tag = "KYC")]
-#[get("/kyc/status")]
+#[get("/kyc/status/<user_id>")]
 pub async fn get_kyc_status(
     db: &State<DbConn>,
-    auth: AuthGuard,
+    user_id: String,
 ) -> Result<Json<ApiResponse<serde_json::Value>>, ApiError> {
+    let object_id = ObjectId::parse_str(&user_id)
+        .map_err(|_| ApiError::bad_request("Invalid user ID"))?;
+    
     let kyc = db.collection::<Kyc>("kycs")
-        .find_one(doc! { "user_id": auth.user_id }, None)
+        .find_one(doc! { "user_id": object_id }, None)
         .await
         .map_err(|e| ApiError::internal_error(format!("Database error: {}", e)))?;
     
@@ -125,7 +136,6 @@ pub struct KycListQuery {
 #[get("/kyc/admin/submissions?<query..>")]
 pub async fn get_all_kyc_submissions(
     db: &State<DbConn>,
-    _auth: AuthGuard, // TODO: Add admin guard
     query: KycListQuery,
 ) -> Result<Json<ApiResponse<serde_json::Value>>, ApiError> {
     let page = query.page.unwrap_or(1).max(1);
@@ -175,10 +185,9 @@ pub async fn get_all_kyc_submissions(
 #[get("/kyc/admin/<kyc_id>")]
 pub async fn get_kyc_by_id(
     db: &State<DbConn>,
-    _auth: AuthGuard, // TODO: Add admin guard
     kyc_id: String,
 ) -> Result<Json<ApiResponse<serde_json::Value>>, ApiError> {
-    let object_id = mongodb::bson::oid::ObjectId::parse_str(&kyc_id)
+    let object_id = ObjectId::parse_str(&kyc_id)
         .map_err(|_| ApiError::bad_request("Invalid KYC ID"))?;
     
     let kyc = db.collection::<Kyc>("kycs")
@@ -194,17 +203,17 @@ pub async fn get_kyc_by_id(
 pub struct UpdateKycStatusDto {
     pub status: String, // "approved" or "rejected"
     pub rejection_reason: Option<String>,
+    pub verified_by: Option<String>, // Optional admin user ID
 }
 
 #[openapi(tag = "KYC")]
 #[put("/kyc/admin/<kyc_id>/status", data = "<dto>")]
 pub async fn update_kyc_status(
     db: &State<DbConn>,
-    auth: AuthGuard, // TODO: Add admin guard
     kyc_id: String,
     dto: Json<UpdateKycStatusDto>,
 ) -> Result<Json<ApiResponse<serde_json::Value>>, ApiError> {
-    let object_id = mongodb::bson::oid::ObjectId::parse_str(&kyc_id)
+    let object_id = ObjectId::parse_str(&kyc_id)
         .map_err(|_| ApiError::bad_request("Invalid KYC ID"))?;
     
     let kyc = db.collection::<Kyc>("kycs")
@@ -221,10 +230,16 @@ pub async fn update_kyc_status(
     
     let mut update_doc = doc! {
         "status": status,
-        "verified_by": auth.user_id,
         "verified_at": DateTime::now(),
         "updated_at": DateTime::now(),
     };
+    
+    // Add verified_by if provided
+    if let Some(ref verified_by_str) = dto.verified_by {
+        if let Ok(verified_by_id) = ObjectId::parse_str(verified_by_str) {
+            update_doc.insert("verified_by", verified_by_id);
+        }
+    }
     
     if let Some(ref reason) = dto.rejection_reason {
         update_doc.insert("rejection_reason", reason);
